@@ -461,6 +461,8 @@ Error messages should include: **what** failed, **which** entity (with ID), **wh
 - [ ] No unbounded result sets (pagination or explicit limit on all list queries)
 - [ ] Locks held for minimum duration
 - [ ] No unnecessary allocations in hot paths
+- [ ] No synchronous external call (RPC, HTTP, queue publish) on a response path that isn't required for the response's correctness
+- [ ] In any function that launches concurrent work (goroutines, `Promise.all`, `asyncio.gather`, `Task.WhenAll`, etc.), every sibling external call is also async — or there's a comment explaining why this one must block
 
 **What's missing? Check for:**
 - A new query that needs an index but doesn't have one
@@ -474,6 +476,9 @@ Error messages should include: **what** failed, **which** entity (with ID), **wh
 - Unbounded slice/array growth in a loop
 - Mutex or lock held across an I/O operation
 - No pagination on list endpoints
+- Asymmetric concurrency: one sync external call surrounded by concurrent launches (the canonical p99 regression pattern)
+- A `non-blocking` / `fire-and-forget` / `best-effort` comment on a call the code synchronously waits on — the comment is the giveaway that the author thought it was async
+- Outbound RPC/HTTP/queue call with no duration metric at the call site
 
 **Score anchors:**
 - **3** — No N+1 queries; some unbounded queries possible on low-traffic paths; locks scoped appropriately
@@ -572,6 +577,8 @@ This is not a scored dimension — it's a qualitative check that can generate fi
 ---
 
 ## Output Format
+
+**Resumption checkpoint:** Once the verdict is composed (and, in panel reviews, merged across reviewers), file it as a ticket comment (e.g. via `forecast jira comment`) *before* handing back to the Tasker — so a crash mid-iteration doesn't lose the verdict + iteration backlog. Include verdict, the dimension table, and any CRITICAL/HIGH findings (full text — that's the iteration backlog). Skip Mediums/Lows in the comment; they live in the report. If the comment fails, continue; do not block.
 
 ```markdown
 # Code Review: [Component Name]
