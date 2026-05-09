@@ -783,6 +783,26 @@ Thresholds vary by risk tier:
 >
 > Critical and High share the same quality bar — what differentiates them is **process rigor** (consensus required, design agent, security linter, mutation testing, verification agent), not score floor.
 
+#### Component-specific dimension floors
+
+On top of the general tier minimum, certain components require hard per-dimension floors. **No reviewer may score below these values.** If any reviewer does, the component cannot APPROVE regardless of the overall quality score.
+
+| Component | Perf | Idem | Resil | Obs |
+|-----------|------|------|-------|-----|
+| Wallet write paths (deposits, withdrawals, transfers, balance mutations) | 5 | 5 | 5 | — |
+| Bet settlement write paths | 5 | 5 | 5 | 5 |
+| Bet placement write paths (live/in-play) | 5 | 5 | 5 | — |
+| Jackpot award paths | 4 | 5 | 5 | — |
+| Responsible gambling enforcement (self-exclusion, deposit limits, cooling-off) | — | — | — | 5 |
+
+A dash (—) means the dimension has no component-specific floor; the general tier minimum still applies.
+
+**Why these floors exist:**
+- **Wallet / settlement / placement writes** share high TPS, money movement, and real concurrent-duplicate risk — 5/5 on performance, idempotency, and resilience reflects what correctness means at this scale, not aspirational engineering.
+- **Bet settlement** additionally requires 5/5 observability because dispute resolution and regulatory inquiries require tracing the full bet lifecycle (placed → odds locked → event resolved → outcome determined → payout calculated → wallet credited) with timing at each state transition.
+- **Jackpot award paths** have low TPS but catastrophic per-event risk from race conditions — idempotency and resilience are non-negotiable, while performance 4/5 (bounded queries, documented indexes) is sufficient for the volume.
+- **Responsible gambling enforcement** requires 5/5 observability because regulators require reconstruction of the full decision path (what checks ran, what data was consulted, what the exclusion status returned, and why a player was allowed through) — the compliance pass/fail gate covers "did you log it," but observability 5/5 covers "can you explain it."
+
 **APPROVE** requires ALL of:
 - Required consensus (see table): all 3 critical dimensions PASS
 - No open CRITICAL or HIGH findings from any reviewer
