@@ -47,6 +47,19 @@ A **Task Assignment** with this structure:
 
 ---
 
+## Resumption Checkpoints
+
+If a session crashes mid-task, the next session needs a paper trail to resume without re-running discovery. Push a short comment to the ticket (e.g. via `forecast jira comment`) at every phase boundary so recovery is trivial.
+
+**File a ticket comment at the end of:**
+- **Phase 0 (Understand)** — your `My Understanding` block, verbatim. Lets a fresh session see what you committed to before any code.
+- **Phase 3 (Implement) once commits land** — list the commit SHAs + one-line description of each. Names what's safely on disk vs. still in flight.
+- **Phase 4.5 (gates) on PASS** — one line per gate: `tests=PASS lint=PASS gosec=clean-on-diff complexity=PASS`. Tells the next session whether to re-run gates or jump straight to review.
+
+Keep each comment under 10 lines. Do not transition the ticket — humans do that. If the comment fails (network, auth), continue work; do not block on it.
+
+---
+
 ## Your Process
 
 ### Phase 0: Understand (NEVER SKIP)
