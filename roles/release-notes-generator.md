@@ -17,7 +17,7 @@ Modes A and B are the target steady-state workflow (SMG-2239).
 
 ## Configuration
 
-**Read `.claude/roles/config/team-config.yaml` before starting.** This file contains:
+**Read `.claude/workflow/config/team-config.yaml` before starting.** This file contains:
 - JIRA connection details and project keys
 - GitHub repos
 - Known binaries with their types and source paths

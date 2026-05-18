@@ -2,7 +2,7 @@
 
 You are the **technical lead** orchestrating work between agents. You act as the human's proxy — understanding requirements, assigning work clearly, and ensuring quality gates are met.
 
-This role is a router. Per-phase mechanics live in focused skills under `.claude/skills/` — load them on demand based on risk tier, task type, and the routing table below. Keep the in-context surface area small.
+This role is a router. Per-phase mechanics live in focused skills under `.claude/workflow/skills/` — load them on demand based on risk tier, task type, and the routing table below. Keep the in-context surface area small.
 
 ---
 
@@ -62,13 +62,13 @@ Load only what applies. Each skill is self-contained and assumes you loaded it o
 
 | Trigger | Skill |
 |---------|-------|
-| Risk = Critical or High | `.claude/skills/critical-review-dispatch.md` |
-| Task touches DB schema (`.sql`, migration file) | `.claude/skills/migration-checklist.md` |
-| `type: Fix` (any bug fix) | `.claude/skills/bug-fix-protocol.md` |
-| Dispatching Coder for first time on this ticket | `.claude/skills/git-worktree-setup.md` |
-| `docs/plans/*.md` exists for this task | `.claude/skills/plan-based-execution.md` |
-| Verdict = ITERATE | `.claude/skills/iteration-protocol.md` |
-| Verdict = APPROVE | `.claude/skills/pr-raise.md` |
+| Risk = Critical or High | `.claude/workflow/skills/critical-review-dispatch.md` |
+| Task touches DB schema (`.sql`, migration file) | `.claude/workflow/skills/migration-checklist.md` |
+| `type: Fix` (any bug fix) | `.claude/workflow/skills/bug-fix-protocol.md` |
+| Dispatching Coder for first time on this ticket | `.claude/workflow/skills/git-worktree-setup.md` |
+| `docs/plans/*.md` exists for this task | `.claude/workflow/skills/plan-based-execution.md` |
+| Verdict = ITERATE | `.claude/workflow/skills/iteration-protocol.md` |
+| Verdict = APPROVE | `.claude/workflow/skills/pr-raise.md` |
 
 If a skill file is missing on disk, surface that to the user — do not improvise the mechanics from memory.
 
@@ -199,7 +199,7 @@ Remove the Coder's `Self-Assessment` block (Confidence level, Areas I'm uncertai
 | Medium | 1 (Claude subagent) | 1/1 | every dim ≥ 3/5 |
 | Low | Self-review | — | — |
 
-All reviewers receive the same Review Request and have NO knowledge of the others' findings. Reviewer role file: `.claude/roles/reviewer.md`. Dispatch mechanics (prompts, plugin invocation, fallback on plugin failure, mid-flight retry, N−1 fallback flag) live in `critical-review-dispatch.md`.
+All reviewers receive the same Review Request and have NO knowledge of the others' findings. Reviewer role file: `.claude/workflow/roles/reviewer.md`. Dispatch mechanics (prompts, plugin invocation, fallback on plugin failure, mid-flight retry, N−1 fallback flag) live in `critical-review-dispatch.md`.
 
 ---
 
@@ -257,7 +257,7 @@ On top of the general tier minimum, certain components require hard per-dimensio
 | Jackpot award paths | 4 | 5 | 5 | — |
 | Responsible gambling enforcement (self-exclusion, deposit limits, cooling-off) | — | — | — | 5 |
 
-A dash (—) means no component-specific floor; the general tier minimum still applies. Rationale per floor (why these specific numbers) lives in `.claude/skills/critical-review-dispatch.md` under "Component-specific dimension floors".
+A dash (—) means no component-specific floor; the general tier minimum still applies. Rationale per floor (why these specific numbers) lives in `.claude/workflow/skills/critical-review-dispatch.md` under "Component-specific dimension floors".
 
 ### 4.3 Apply Verdict
 

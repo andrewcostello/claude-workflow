@@ -8,7 +8,7 @@ Invoke this role each morning with: `Use the standup-reporter role`
 
 ## Configuration
 
-**Read `.claude/roles/config/team-config.yaml` before starting.** This file contains:
+**Read `.claude/workflow/config/team-config.yaml` before starting.** This file contains:
 - JIRA connection details and project keys
 - GitHub repos to scan
 - Team roster with GitHub/JIRA mappings and per-person notes (e.g., exclusions from "work without tickets")

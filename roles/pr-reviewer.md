@@ -198,7 +198,7 @@ Record the tier for each file — this guides where you spend time and helps the
 
 ## Phase 3: Run the 9-Dimension Review
 
-**Read `.claude/roles/reviewer.md` for the complete review instructions.** Apply all 9 dimensions exactly as described there.
+**Read `.claude/workflow/roles/reviewer.md` for the complete review instructions.** Apply all 9 dimensions exactly as described there.
 
 Key inputs to the review:
 - Changed files (read in Phase 1.5)

@@ -1,24 +1,52 @@
-# claude-roles
+# claude-workflow
 
-Shared Claude agent role definitions for the full development lifecycle — from task breakdown through implementation, review, and PR feedback.
+Shared Claude agent role definitions and dispatcher-friendly workflow skills for the full development lifecycle — from task breakdown through implementation, review, and PR feedback.
 
-## Roles
+```
+claude-workflow/
+├── roles/    # Agent role definitions — read by Claude as "be this role"
+├── skills/   # Composable workflow skills the Tasker loads on demand
+├── config/   # Shared project-agnostic configuration
+└── docs/     # Supporting documentation
+```
+
+## Roles (`roles/`)
 
 | File | Role | Purpose |
 |------|------|---------|
-| `tasker.md` | Orchestrator | Breaks down work, dispatches agents, manages review cycles |
-| `design-agent.md` | Design Agent | Produces 2-3 competing designs for Tasker to select — mandatory for Critical/High risk |
-| `coder.md` | Implementation Agent | Writes tested code against an approved design spec |
-| `verification-agent.md` | Verification Agent | Independent ground-truth runner — fresh-checkout build/test/lint/static-analysis/mutation/bench with no Coder context. Gates Critical review before any reviewer runs. |
-| `bug-reproducer.md` | Bug Reproducer | Investigation phase before root cause is confirmed. Pulls a ticket (FSG/SMG/customer report), writes a cross-app harness spec to reproduce the reported behavior, files/updates the SMG ticket with findings, opens a PR. Outputs an SMG key + PR ready to hand off to tasker / regression-test-author / coder. |
-| `regression-test-author.md` | Regression Test Author | Independent test author for confirmed user-reported bugs at Medium/High risk. Two phases on the same agent: writes a failing test from the user's reported contract before the fix exists, then verifies the fix satisfies it once the fix PR is up. Black-box only — refuses to write unit tests at the layer the Coder's TDD covers. |
-| `reviewer.md` | Code Reviewer | 8-dimension review with data flow tracing, dedicated test quality audit, design coherence checks, and focused sub-agents |
-| `security-linter.md` | Security Auditor | Focused SQL injection, PII exposure, integer overflow, and auth bypass audit with severity grading — gates Critical review |
-| `config/team-config.yaml` | Shared Configuration | Team roster, JIRA/GitHub settings, tracked epics, P0 tickets, known binaries — single source of truth for project-specific config |
-| `pr-reviewer.md` | PR Reviewer | Interactive PR review: 8-dimension analysis, severity calibration with human reviewer, medium+ issue walkthrough with teaching, PR tour, and combined human+agent summary comment |
-| `pr-responder.md` | PR Responder | Triages and responds to PR review comments — fixes valid issues, replies with evidence, reports summary to human |
-| `standup-reporter.md` | Standup Reporter | Generates daily engineering standup from JIRA + GitHub — Priority Watch, team status, PR attention list, P0 tracker, publishes to Confluence |
-| `release-notes-generator.md` | Release Notes Generator | Produces structured release notes from merged PRs and JIRA tickets — categorised by feature, fix, and breaking change |
+| `roles/tasker.md` | Orchestrator | Breaks down work, dispatches agents, manages review cycles. Now a router that loads skills/ as needed. |
+| `roles/design-agent.md` | Design Agent | Produces 2-3 competing designs for Tasker to select — mandatory for Critical/High risk |
+| `roles/coder.md` | Implementation Agent | Writes tested code against an approved design spec |
+| `roles/verification-agent.md` | Verification Agent | Independent ground-truth runner — fresh-checkout build/test/lint/static-analysis/mutation/bench with no Coder context. Gates Critical review before any reviewer runs. |
+| `roles/bug-reproducer.md` | Bug Reproducer | Investigation phase before root cause is confirmed. Pulls a ticket (FSG/SMG/customer report), writes a cross-app harness spec to reproduce the reported behavior, files/updates the SMG ticket with findings, opens a PR. |
+| `roles/regression-test-author.md` | Regression Test Author | Independent test author for confirmed user-reported bugs at Medium/High risk. Two phases on the same agent. Black-box only — refuses to write unit tests at the layer the Coder's TDD covers. |
+| `roles/reviewer.md` | Code Reviewer | 8-dimension review with data flow tracing, dedicated test quality audit, design coherence checks, and focused sub-agents |
+| `roles/security-linter.md` | Security Auditor | Focused SQL injection, PII exposure, integer overflow, and auth bypass audit with severity grading — gates Critical review |
+| `roles/pr-reviewer.md` | PR Reviewer | Interactive PR review: 8-dimension analysis, severity calibration with human reviewer, medium+ issue walkthrough with teaching, PR tour, and combined human+agent summary comment |
+| `roles/pr-responder.md` | PR Responder | Triages and responds to PR review comments — fixes valid issues, replies with evidence, reports summary to human |
+| `roles/standup-reporter.md` | Standup Reporter | Generates daily engineering standup from JIRA + GitHub — Priority Watch, team status, PR attention list, P0 tracker, publishes to Confluence |
+| `roles/release-notes-generator.md` | Release Notes Generator | Produces structured release notes from merged PRs and JIRA tickets — categorised by feature, fix, and breaking change |
+
+## Skills (`skills/`)
+
+Composable workflow primitives the Tasker loads on demand. Each skill is self-contained, ≤ 200 lines, with a clear scope statement. The Tasker's skill-routing table maps trigger conditions to skills.
+
+| File | When Loaded | Owns |
+|------|-------------|------|
+| `skills/critical-review-dispatch.md` | Risk = Critical or High | Design Agent dispatch, Verification Agent, Security Linter, Static Analysis Gate, 3-reviewer parallel panel, mid-flight retry, component-specific dimension floors rationale |
+| `skills/migration-checklist.md` | Task touches DB schema | Filename convention, PK type rules, idempotency + FK indexes + NOT NULL splits |
+| `skills/bug-fix-protocol.md` | `type: Fix` | RED-first protocol, Regression Test Author dispatch criteria |
+| `skills/git-worktree-setup.md` | First dispatch on a ticket | Branch naming, container vs host paths, one-ticket-one-worktree |
+| `skills/pr-raise.md` | Verdict = APPROVE | Human PR gate (Critical OR financial-paths-touched), title/body format, size gates, no-attribution rule |
+| `skills/plan-based-execution.md` | `docs/plans/*.md` exists | Plan-based dispatch with batch checkpoints |
+| `skills/iteration-protocol.md` | Verdict = ITERATE | Targeted re-review scope, full domain test gate, iteration cap |
+
+## Other directories
+
+| Path | Purpose |
+|------|---------|
+| `config/team-config.yaml` | Team roster, JIRA/GitHub settings, tracked epics, P0 tickets, known binaries — single source of truth for project-specific config used by standup-reporter and release-notes-generator |
+| `docs/` | Supporting documentation, migration notes, examples |
 
 ---
 
@@ -44,10 +72,10 @@ Install [cc-gemini-plugin](https://github.com/thepushkarp/cc-gemini-plugin) for 
 
 ```bash
 # New project
-git submodule add https://github.com/andrewcostello/claude-roles.git .claude/roles
+git submodule add https://github.com/andrewcostello/claude-workflow.git .claude/workflow
 
 # Project that already has .claude/
-git submodule add https://github.com/andrewcostello/claude-roles.git .claude/roles
+git submodule add https://github.com/andrewcostello/claude-workflow.git .claude/workflow
 ```
 
 After cloning a project that already uses this submodule:
@@ -56,6 +84,8 @@ After cloning a project that already uses this submodule:
 git submodule update --init --recursive
 ```
 
+> **Migrating from claude-roles?** The repo was renamed from `claude-roles` to `claude-workflow` and restructured to add a `skills/` sibling directory. Update your `.gitmodules` to point at the new URL (GitHub redirects from the old URL automatically), rename the local checkout from `.claude/roles/` to `.claude/workflow/`, and update any project CLAUDE.md / scripts that reference the old `.claude/roles/<role>.md` paths to the new `.claude/workflow/roles/<role>.md` form.
+
 ### 2. Add to CLAUDE.md
 
 Paste this block into your project's `CLAUDE.md`. Fill in the project-specific commands for your stack.
@@ -63,21 +93,21 @@ Paste this block into your project's `CLAUDE.md`. Fill in the project-specific c
 ```markdown
 ## Agent Workflow
 
-Role definitions live in `.claude/roles/`. For non-trivial tasks, use the three-agent
+Role definitions live in `.claude/workflow/roles/`. For non-trivial tasks, use the three-agent
 workflow:
 
 ### How Claude Uses These Roles
 
 **To start a task as Tasker:**
-Read `.claude/roles/tasker.md` and adopt the Tasker role.
+Read `.claude/workflow/roles/tasker.md` and adopt the Tasker role.
 
 **To dispatch the Coder (subagent):**
 Create a general-purpose subagent with this prompt:
-"Read `.claude/roles/coder.md` for your role instructions, then implement: [Task Assignment]"
+"Read `.claude/workflow/roles/coder.md` for your role instructions, then implement: [Task Assignment]"
 
 **To dispatch Reviewer A (subagent):**
 Create a general-purpose subagent with this prompt:
-"Read `.claude/roles/reviewer.md` for your role instructions, then review: [Review Request]"
+"Read `.claude/workflow/roles/reviewer.md` for your role instructions, then review: [Review Request]"
 
 **To dispatch Reviewer B (Codex plugin):**
 Dispatch via the Codex Claude Code plugin with the reviewer.md prompt.
@@ -87,11 +117,11 @@ Dispatch via the cc-gemini-plugin with the reviewer.md prompt.
 
 **To dispatch the Design Agent (subagent — Critical/High risk):**
 Create a general-purpose subagent with this prompt:
-"Read `.claude/roles/design-agent.md` for your role instructions, then produce designs for: [Task Assignment]"
+"Read `.claude/workflow/roles/design-agent.md` for your role instructions, then produce designs for: [Task Assignment]"
 
 **To dispatch the Security Linter (subagent — Critical risk gate):**
 Create a general-purpose subagent with this prompt:
-"Read `.claude/roles/security-linter.md` for your role instructions, then audit: [file list]"
+"Read `.claude/workflow/roles/security-linter.md` for your role instructions, then audit: [file list]"
 
 ### Project Commands
 
@@ -169,13 +199,13 @@ should encode project invariants:
 Tell Claude:
 
 ```
-Read .claude/roles/tasker.md and act as the Tasker. I need: [task description]
+Read .claude/workflow/roles/tasker.md and act as the Tasker. I need: [task description]
 ```
 
 With a plan file already written:
 
 ```
-Read .claude/roles/tasker.md. Execute the plan at docs/plans/2025-01-01-feature-name.md
+Read .claude/workflow/roles/tasker.md. Execute the plan at docs/plans/2025-01-01-feature-name.md
 ```
 
 ### Workflow overview
@@ -235,7 +265,7 @@ role file path in the subagent prompt — subagents do not inherit conversation 
 **Coder subagent prompt template:**
 
 ```
-Read the file `.claude/roles/coder.md` for your complete role instructions.
+Read the file `.claude/workflow/roles/coder.md` for your complete role instructions.
 
 Project commands:
 - Test: [project test command]
@@ -249,7 +279,7 @@ Then implement this task:
 **Reviewer subagent prompt template:**
 
 ```
-Read the file `.claude/roles/reviewer.md` for your complete role instructions.
+Read the file `.claude/workflow/roles/reviewer.md` for your complete role instructions.
 You did NOT write this code. Your job is to find defects, teach principles, and raise the bar.
 
 [paste Review Request here — spec, file list, actual test output]
@@ -258,21 +288,21 @@ You did NOT write this code. Your job is to find defects, teach principles, and 
 **PR Reviewer prompt (human-partnered, interactive):**
 
 ```
-Read the file `.claude/roles/pr-reviewer.md` for your complete role instructions.
+Read the file `.claude/workflow/roles/pr-reviewer.md` for your complete role instructions.
 Review PR #NNN in [owner/repo].
 ```
 
 **PR Responder prompt (after review comments are posted):**
 
 ```
-Read the file `.claude/roles/pr-responder.md` for your complete role instructions.
+Read the file `.claude/workflow/roles/pr-responder.md` for your complete role instructions.
 Respond to comments on PR #NNN in [owner/repo].
 ```
 
 **Security linter subagent prompt template:**
 
 ```
-Read the file `.claude/roles/security-linter.md` for your complete role instructions.
+Read the file `.claude/workflow/roles/security-linter.md` for your complete role instructions.
 Audit SQL injection, PII exposure, integer overflow, and auth/permission bypass.
 
 Risk context: [what this code touches — SQL, auth, money, etc.]
@@ -287,9 +317,9 @@ Files to audit:
 
 ```bash
 # In any project using this submodule
-git submodule update --remote .claude/roles
-git add .claude/roles
-git commit -m "chore: update claude-roles submodule"
+git submodule update --remote .claude/workflow
+git add .claude/workflow
+git commit -m "chore: update claude-workflow submodule"
 ```
 
 ---
@@ -298,13 +328,13 @@ git commit -m "chore: update claude-roles submodule"
 
 | Want to... | Say to Claude |
 |------------|---------------|
-| Run the full workflow | "Read `.claude/roles/tasker.md` and act as Tasker. Task: ..." |
-| Design before coding | "Read `.claude/roles/design-agent.md` and produce designs for: ..." |
-| Just implement something | "Read `.claude/roles/coder.md` and implement: ..." |
-| Review existing code | "Read `.claude/roles/reviewer.md` and review: ..." |
-| Security audit only | "Read `.claude/roles/security-linter.md` and audit: ..." |
-| Execute a written plan | "Read `.claude/roles/tasker.md`. Execute plan: `docs/plans/...`" |
-| Review a GitHub PR interactively | "Read `.claude/roles/pr-reviewer.md` and review PR #NNN" |
-| Respond to PR review comments | "Read `.claude/roles/pr-responder.md` and respond to comments on PR #NNN" |
-| Generate daily standup | "Read `.claude/roles/standup-reporter.md` and generate the standup" |
-| Generate release notes | "Read `.claude/roles/release-notes-generator.md` and generate release notes" |
+| Run the full workflow | "Read `.claude/workflow/roles/tasker.md` and act as Tasker. Task: ..." |
+| Design before coding | "Read `.claude/workflow/roles/design-agent.md` and produce designs for: ..." |
+| Just implement something | "Read `.claude/workflow/roles/coder.md` and implement: ..." |
+| Review existing code | "Read `.claude/workflow/roles/reviewer.md` and review: ..." |
+| Security audit only | "Read `.claude/workflow/roles/security-linter.md` and audit: ..." |
+| Execute a written plan | "Read `.claude/workflow/roles/tasker.md`. Execute plan: `docs/plans/...`" |
+| Review a GitHub PR interactively | "Read `.claude/workflow/roles/pr-reviewer.md` and review PR #NNN" |
+| Respond to PR review comments | "Read `.claude/workflow/roles/pr-responder.md` and respond to comments on PR #NNN" |
+| Generate daily standup | "Read `.claude/workflow/roles/standup-reporter.md` and generate the standup" |
+| Generate release notes | "Read `.claude/workflow/roles/release-notes-generator.md` and generate release notes" |
