@@ -28,7 +28,14 @@ forecast:
   # Override values may also be objects: `{to: "Resolved", resolution: "Won't Do"}`
 
 tasks:
-  - key: TBD-1                              # placeholder until bridge creates the Jira ticket
+  - key: BSA-E2E-0-1                        # local identifier (dispatcher-side). Free-form,
+                                             # unique within the file. Can be semantic
+                                             # (BSA-E2E-0-1) or generic (TBD-1) — either works.
+    jira_key:                               # Jira issue key. Left empty until the bridge runs
+                                             # `forecast jira create` and writes the assigned
+                                             # SMG-NNNN here. Set explicitly if you have an
+                                             # existing Jira ticket you don't want the bridge
+                                             # to re-create.
     summary: "Short imperative summary"     # REQUIRED — used by both
     description: |                          # REQUIRED — used by both
       Multi-line description.
@@ -63,7 +70,8 @@ tasks:
 
 | YAML field | Required | `forecast jira create` flag | Jira field |
 |------------|----------|-----------------------------|------------|
-| `key` | yes (placeholder ok) | (output — Jira assigns) | Issue key |
+| `key` | yes | (not read or written by the bridge) | (not a Jira field — local identifier only) |
+| `jira_key` | no (bridge writes it) | (output — Jira assigns) | Issue key |
 | `summary` | yes | `--summary` | Summary |
 | `description` | yes | `--description` | Description |
 | `type` | yes | `--type` (default Task) | Issue Type |
@@ -82,13 +90,22 @@ tasks:
 
 ---
 
+## Key vs jira_key (important)
+
+The dispatcher and the bridge use two different fields:
+
+- **`key`** — the dispatcher's local identifier. Used for `blockedBy` references, runnable-set computation, summary file paths, and `--only` filters. **Free-form** (must just be unique within the file). The bridge never reads or writes it.
+- **`jira_key`** — the Jira issue key (e.g., `SMG-2890`). Empty until the bridge runs `forecast jira create`. Set explicitly if you already have a Jira ticket for that row.
+
+This separation means semantic local keys like `BSA-E2E-0-1` survive the bridge unchanged. The bridge appends `jira_key: SMG-2890` to that row; `BSA-E2E-0-1` stays as the dispatcher identifier so `blockedBy: [BSA-E2E-0-1]` references downstream still resolve.
+
 ## How the bridge uses these fields
 
-**`dispatcher forecast-create <yaml>`** — for each task row whose `key` matches the placeholder pattern, runs `forecast jira create` with the mapped flags. On success, captures `Created: KEY-NN` from stdout and writes the real Jira key back to the YAML row.
+**`dispatcher forecast-create <yaml>`** — for each task row with no `jira_key`, runs `forecast jira create` with the mapped flags. On success, captures `Created: KEY-NN` from stdout and writes that key to `row["jira_key"]`. The `key` field is left untouched.
 
-Idempotent. Re-running after a partial failure picks up only the still-placeholder rows.
+Idempotent. Re-running after a partial failure picks up only the rows that still lack `jira_key`.
 
-**`dispatcher forecast-sync <yaml>`** — for each row in a terminal status (`Done`, `Blocked`, `Escalated`) with a real Jira key, runs `forecast jira transition <key> --to <target>` with an auto-generated comment:
+**`dispatcher forecast-sync <yaml>`** — for each row in a terminal status (`Done`, `Blocked`, `Escalated`) whose `jira_key` is set, runs `forecast jira transition <jira_key> --to <target>` with an auto-generated comment:
 - `Done` → includes `PR: <pr_url>`, iteration count, quality score
 - `Blocked` → includes `blocked_reason`
 - `Escalated` → "Escalated — needs human review" + `blocked_reason`
@@ -108,8 +125,9 @@ When the Tasker is asked to write task rows for a forecast-managed project:
 - [ ] Every row has `key`, `summary`, `description`, `type`, `labels` populated
 - [ ] Every `labels` list includes exactly one `size:S|M|L|XL` entry
 - [ ] Every `labels` list includes a `type:*` entry (per evenplay-mono CLAUDE.md convention)
-- [ ] Keys start as `TBD-1, TBD-2, ...` for new tickets (or whatever `placeholder_prefix` you've set)
-- [ ] `blockedBy` references match real or placeholder keys that exist elsewhere in the file
+- [ ] `key` is free-form but unique. Use semantic identifiers (`BSA-E2E-0-1`) or generic placeholders (`TBD-1`) — either works.
+- [ ] `jira_key` is left empty unless the row corresponds to an existing Jira ticket.
+- [ ] `blockedBy` references match `key` values (the dispatcher's local identifiers) elsewhere in the file
 - [ ] Description is in block-scalar form (`description: |`) for multi-line content
 - [ ] Optional fields (`priority`, `story_points`, `due_date`, etc.) added only when known
 
@@ -129,7 +147,9 @@ dispatcher forecast-sync tasks.yaml      # transitions Jira to match dispatcher 
 |---------|-------|-----|
 | `forecast-create` errors: "no .forecast/config.yaml" | Project hasn't been initialized | Run `forecast init` from the project root |
 | `forecast-create` errors: "API auth failed" | Token expired or wrong project key | Check `~/.config/jira/credentials` or `$JIRA_API_TOKEN` |
-| `forecast-create` skips a row unexpectedly | Key already looks like a real Jira key | Use `TBD-` prefix (or change `forecast.placeholder_prefix` in the YAML) |
+| `forecast-create` skips a row unexpectedly | `jira_key` already set (intentionally or from a previous bridge run) | Check the row — clear `jira_key` if you really want a new ticket |
+| `forecast-sync` skips a Done row | `jira_key` missing on that row | Run `forecast-create` first, or set `jira_key` by hand to an existing Jira ticket |
+| Bridge overwrote my semantic key like `BSA-E2E-0-1` | Using a pre-fix version of the bridge | Fixed; the bridge now writes only to `jira_key` and leaves `key` alone |
 | `forecast-sync` transitions fail with "no valid transition" | Source status doesn't allow this target (SMG workflow rules) | Check `forecast jira transitions <key>` for valid moves; adjust `status_mapping` |
 | Dispatcher run fails: "task has no size: label" | Wrote labels as a string instead of a list | Use YAML list syntax: `labels: [size:M, area:schema]` |
 | YAML write conflict between create + run | Bridge and dispatcher writing simultaneously | Both use the same FileLock — wait for create to finish before running |
