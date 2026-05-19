@@ -101,9 +101,11 @@ This separation means semantic local keys like `BSA-E2E-0-1` survive the bridge 
 
 ## How the bridge uses these fields
 
-**`dispatcher forecast-create <yaml>`** — for each task row with no `jira_key`, runs `forecast jira create` with the mapped flags. On success, captures `Created: KEY-NN` from stdout and writes that key to `row["jira_key"]`. The `key` field is left untouched.
+**`dispatcher forecast-create <yaml>`** — for each row that BOTH lacks `jira_key` AND has `status: To Do` (or no status), runs `forecast jira create` with the mapped flags. On success, captures `Created: KEY-NN` from stdout and writes that key to `row["jira_key"]`. The `key` field is left untouched.
 
-Idempotent. Re-running after a partial failure picks up only the rows that still lack `jira_key`.
+**Status-aware** — the bridge skips rows in any non-To-Do state (`In Progress`, `Done`, `Blocked`, `Escalated`) even if they have no `jira_key`. This prevents over-creation when bringing forecast online for an existing project where some rows already reflect completed work that was tracked outside Jira. To force a backfill ticket for a Done row, either temporarily flip its `status` to `To Do` and re-run, or `forecast jira create` it manually.
+
+Idempotent. Re-running after a partial failure picks up only the still-eligible rows.
 
 **`dispatcher forecast-sync <yaml>`** — for each row in a terminal status (`Done`, `Blocked`, `Escalated`) whose `jira_key` is set, runs `forecast jira transition <jira_key> --to <target>` with an auto-generated comment:
 - `Done` → includes `PR: <pr_url>`, iteration count, quality score
