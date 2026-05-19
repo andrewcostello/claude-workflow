@@ -273,6 +273,17 @@ A dash (—) means no component-specific floor; the general tier minimum still a
 
 Every Tasker session ends by writing a summary file — Done, Blocked, or Escalated. This is the contract with the dispatcher. If `$SUMMARY_PATH` is set, write there. Otherwise print to stdout under a single fenced block.
 
+### Commits are a precondition for `Status: Done`
+
+**Before writing `Status: Done`, verify commits exist on the task's branch.** The dispatcher checks `git rev-list --count <base_branch>..HEAD` after the session ends; if the count is 0 the task gets re-spawned with a corrective "please commit your work" prompt (one retry — if still 0, the task is Blocked).
+
+Recoverable: forgetting to commit isn't fatal, but it costs a full Claude session to fix. Avoid it by treating these as Phase 5 preconditions:
+
+1. **All files modified during this session are either committed or explicitly excluded.** Run `git status` in the worktree before writing the summary. Anything not committed and not intended-to-be-uncommitted is a bug.
+2. **Commit messages follow the project's CLAUDE.md format.** Conventional commits (`type(scope): subject`), task key in the subject line, no author attribution.
+3. **Files listed under `## Files changed` in the summary must match `git diff --name-only <base_branch>..HEAD`.** If they don't, the summary is misleading.
+4. **For BSA-style direct-branch workflows** (work lands directly on an epic branch, no PR): commits are still required. "No PR" doesn't mean "no commit." The integrator folds in *committed* branches, not bare worktrees.
+
 ```markdown
 # <TASK-KEY>: <one-line task summary>
 **Status:** Done | Blocked | Escalated
